@@ -1,4 +1,4 @@
-#QVIP：An ILP-based Formal Verification Approach for Quantized Neural Networks
+# QVIP：An ILP-based Formal Verification Approach for Quantized Neural Networks
 This is the official webpage for paper QVIP: An ILP-based Formal Verification Approach for Quantized Neural Networks. In this paper, we make the following main contributions:
 - We propose the first ILP-based verification approach for QNNs featuring both precision and efficiency.
 - We implement our approach as an end-to-end tool QVIP, using the ILP-solver Gurobi for QNN robustness verification and maximum robustness radius computation.
