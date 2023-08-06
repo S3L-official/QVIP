@@ -30,7 +30,7 @@ python QVIP_vs_AAAI21.py --sample_id 251 --eps 3 --dataset fashion-mnist --mode 
 python QVIP.py --sample_id 10 --eps 4 --dataset mnist --arch 1blk_100 --qu_bit 4 --mode gp --outputPath output
 
 # Running QVIP to compute the maximal robustness radius with the starting radius (**startR**) and **Step** size of 10
-# Network=1blk_64 (mnist), Q=4, Input=10, Mode=gurobi-solving, OutputFolder=./outputMaxR
+# Network=1blk_64 (mnist), Q=6, Input=698, Mode=gurobi-solving, OutputFolder=./outputMaxR
 python QVIP_MaxR.py --sample_id 698 --dataset mnist --arch 1blk_64 --qu_bit 6  --eps 10 --step 10 --mode gp --outputPath outputMaxR
 ```
 For the experimental raw data, please refer to: https://github.com/QVIP22/Data.
