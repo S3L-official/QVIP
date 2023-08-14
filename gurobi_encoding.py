@@ -35,9 +35,6 @@ def propagate_dense(in_layer, out_layer, w, b):
         accumulator_lb = np.minimum(bound_1, bound_2).sum() + bias
         accumulator_ub = np.maximum(bound_1, bound_2).sum() + bias
 
-        accumulator_bits = (
-                in_layer.bit_width + in_layer.quantization_config["quantization_bits"]
-        )
         accumulator_frac = in_layer.frac_bits + (
                 in_layer.quantization_config["quantization_bits"]
                 - in_layer.quantization_config["int_bits_weights"]
@@ -48,9 +45,9 @@ def propagate_dense(in_layer, out_layer, w, b):
                 - in_layer.quantization_config["int_bits_activation"]
         )
 
+        lb = qu.real_round(accumulator_lb / (2 ** excessive_bits)) - 1  # for rounding to nearest even number
+        ub = qu.real_round(accumulator_ub / (2 ** excessive_bits)) + 1  # for rounding to nearest even number
 
-        lb = _renormalize(accumulator_lb, excessive_bits)
-        ub = _renormalize(accumulator_ub, excessive_bits)
         if out_layer.signed_output:
             min_val, max_val = qu.int_get_min_max_integer(
                 out_layer.quantization_config["quantization_bits"],
@@ -99,14 +96,18 @@ class LayerEncoding_gurobi:
         ]
 
         if signed_output:
+            bar_lb, bar_ub = qu.int_get_min_max_integer(bit_width, frac_bits)
             self.gp_vars = [
-                gp_model.addVar(lb=-50, vtype=GRB.INTEGER) for i in range(layer_size)
+                gp_model.addVar(lb=bar_lb, ub=bar_ub, vtype=GRB.INTEGER) for i in range(layer_size)
             ]
         else:
+            bar_lb, bar_ub = qu.uint_get_min_max_integer(bit_width, frac_bits)
             self.gp_vars = [
-                gp_model.addVar(vtype=GRB.INTEGER) for i in range(layer_size)
+                gp_model.addVar(ub=bar_ub, vtype=GRB.INTEGER) for i in range(layer_size)
             ]
+
         gp_model.update()
+
         if self.signed_output:
             min_val, max_val = qu.int_get_min_max_integer(
                 self.quantization_config["quantization_bits"],
@@ -203,7 +204,6 @@ class QNNEncoding_gurobi:
         self._last_layer_signed = quantized_model._last_layer_signed
         self.quantization_config = quantized_model.quantization_config
 
-        current_bits = self.quantization_config["input_bits"]
         for i, l in enumerate(quantized_model.dense_layers):
             self.dense_layers.append(
                 LayerEncoding_gurobi(
@@ -280,8 +280,8 @@ class QNNEncoding_gurobi:
             ifgpSat = self.gp_model.status == 2
             print("ifgpSat: " + str(ifgpSat))
             fo = open(path + "/" + str(sample_id) + "_gp.txt", "w")
-            fo.write("Verification Result: " + str(ifgpSat)+"\n")
-            fo.write("Encoding Time: " + str(self._stats["build_time"])+"\n")
+            fo.write("Verification Result: " + str(ifgpSat) + "\n")
+            fo.write("Encoding Time: " + str(self._stats["build_time"]) + "\n")
             fo.write("Solving Time: " + str(self._stats["gp_sat_time"]))
             return ifgpSat
 
@@ -300,15 +300,14 @@ class QNNEncoding_gurobi:
             ifsmtSat = result_smt == self.btor.SAT
             print("ifsmtSat: " + str(ifsmtSat))
             fo = open(path + "/" + str(sample_id) + "_smt.txt", "w")
-            fo.write("Verification Result: " + str(ifsmtSat)+"\n")
-            fo.write("Encoding Time: " + str(self._stats["build_time"])+"\n")
+            fo.write("Verification Result: " + str(ifsmtSat) + "\n")
+            fo.write("Encoding Time: " + str(self._stats["build_time"]) + "\n")
             fo.write("Solving Time: " + str(self._stats["smt_sat_time"]))
             return ifsmtSat
 
         else:
             print("Wrong mode type")
             exit(0)
-
 
     def propagate_bounds(self):
 
@@ -634,7 +633,7 @@ class QNNEncoding_gurobi:
         if len(id_var_weight_list) == 1:
             i, x, weight_value = id_var_weight_list[0]
             if weight_value == 0:
-                return None
+                return 0
 
             if weight_value == 1:
                 return x
@@ -675,7 +674,6 @@ class QNNEncoding_gurobi:
         clipped_lb = np.clip(lb, min_val, max_val)
         clipped_ub = np.clip(ub, min_val, max_val)
 
-
         if self.config["relu_simplify"] and clipped_ub == clipped_lb:
             self.btor.Assert(self.btor.Eq(output_var, int(clipped_ub)))
             self.print_verbose("neuron fixed at {}".format(int(clipped_ub)))
@@ -693,7 +691,6 @@ class QNNEncoding_gurobi:
             self.print_verbose("neuron fixed at lb {}".format(min_val))
             self._stats["constant_neurons"] += 1
             return
-
 
         residue = self.btor.Slice(value, excessive_bits - 1, 0)
         quotient = self.btor.Slice(
@@ -715,7 +712,6 @@ class QNNEncoding_gurobi:
                     & self.btor.Eq(rouned_output, quotient)
             )
         )
-
 
         sign_ext_func = self.btor.Uext
         gte_func = self.btor.Ugte
@@ -788,13 +784,11 @@ class QNNEncoding_gurobi:
             )
             self._stats["unstable_neurons"] += 1
 
-
         if self.config["add_bound_constraints"]:
             if clipped_lb > min_val:
                 self.btor.Assert(gte_func(output_var, int(clipped_lb)))
             if clipped_ub < max_val:
                 self.btor.Assert(lte_func(output_var, int(clipped_ub)))
-
 
     def gp_renormalize(
             self, value, gp_value, lb, ub, output_var, gp_output_var, signed_output, excessive_bits, aux=None
@@ -835,7 +829,6 @@ class QNNEncoding_gurobi:
             self.print_verbose("neuron fixed at lb {}".format(min_val))
             self._stats["constant_neurons"] += 1
             return
-
 
         gp_lb = max(lb, min_val)
         gp_ub = min(ub, max_val)
@@ -959,7 +952,7 @@ class QNNEncoding_gurobi:
     def assert_not_argmax_gurobi(self, max_index):
         bigM = GRB.MAXINT
         k_list = []
-        for i in range(len(self.output_vars)):
+        for i in range(len(self.output_gp_vars)):
             if i == int(max_index):
                 continue
             if i < int(max_index):
@@ -1054,6 +1047,12 @@ class QNNEncoding_gurobi:
         )
         return np.array(input_values_gp, dtype=np.int32)
 
+    def get_output_assignment_gurobi(self):
+        output_values_gp = np.array(
+            [var.X for var in self.output_gp_vars]
+        )
+        return np.array(output_values_gp, dtype=np.int32)
+
     def get_forward_buffer(self):
         print("_last_layer_signed: ", str(self._last_layer_signed))
         input_values = np.array(
@@ -1112,6 +1111,7 @@ def check_robustness_gurobi(encoding, x, y, eps, mode, path, sample_id):  # enco
         encoding.assert_not_argmax(int(y))
     elif mode == "gp":
         encoding.assert_not_argmax_gurobi(int(y))
+        # print("Skip gurobi")
     else:
         print("Error mode")
         exit(0)
@@ -1122,6 +1122,8 @@ def check_robustness_gurobi(encoding, x, y, eps, mode, path, sample_id):  # enco
     if ifSat:
         if mode == "gp":
             attack = encoding.get_input_assignment_gurobi()
+            output = encoding.get_output_assignment_gurobi()
+            print("Output is: ", output)
         elif mode == "smt":
             attack = encoding.get_input_assignment()
         else:
