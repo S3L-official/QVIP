@@ -33,4 +33,3 @@ python QVIP.py --sample_id 10 --eps 4 --dataset mnist --arch 1blk_100 --qu_bit 4
 # Network=1blk_64 (mnist), Q=6, Input=698, Mode=gurobi-solving, OutputFolder=./outputMaxR
 python QVIP_MaxR.py --sample_id 698 --dataset mnist --arch 1blk_64 --qu_bit 6  --eps 10 --step 10 --mode gp --outputPath outputMaxR
 ```
-For the experimental raw data, please refer to: https://github.com/QVIP22/Data.
