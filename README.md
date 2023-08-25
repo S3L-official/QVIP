@@ -1,5 +1,5 @@
 # QVIP：An ILP-based Formal Verification Approach for Quantized Neural Networks
-This is the official webpage for paper QVIP: An ILP-based Formal Verification Approach for Quantized Neural Networks. In this paper, we make the following main contributions:
+This is the official webpage for the paper QVIP: An ILP-based Formal Verification Approach for Quantized Neural Networks. In this paper, we make the following main contributions:
 - We propose the first ILP-based verification approach for QNNs featuring both precision and efficiency.
 - We implement our approach as an end-to-end tool QVIP, using the ILP-solver Gurobi for QNN robustness verification and maximum robustness radius computation.
 - We conduct an extensive evaluation of QVIP, demonstrating the efficiency and effectiveness of QVIP, e.g., significantly outperforming the state-of-the-art methods.
@@ -33,3 +33,13 @@ python QVIP.py --sample_id 10 --eps 4 --dataset mnist --arch 1blk_100 --qu_bit 4
 # Network=1blk_64 (mnist), Q=6, Input=698, Mode=gurobi-solving, OutputFolder=./outputMaxR
 python QVIP_MaxR.py --sample_id 698 --dataset mnist --arch 1blk_64 --qu_bit 6  --eps 10 --step 10 --mode gp --outputPath outputMaxR
 ```
+
+## Publications
+
+If you use QVIP, please kindly cite our papers:
+- Zhang, Y., Zhao, Z., Chen, G., Song, F., Zhang, M., Chen, T., Sun, J.: QVIP: An ILP-based formal verification approach for quantized neural networks. In: Proceedings of the 37th IEEE/ACM International Conference on Automated Software Engineering, 2022.
+
+Some related works (verification of Quantized Neural Networks) can also be found in our other papers:
+- Zhang, Y., Zhao, Z., Chen, G., Song, F., Chen, T.: BDD4BNN: A BDD-based quantitative analysis framework for binarized neural networks. In: Proceedings of the 33rd International Conference on Computer Aided Verification, 2021.
+- Zhang, Y., Zhao, Z., Chen, G., Song, F., Chen, T.: Precise quantitative analysis of binarized neural networks: A bdd-based approach. ACM Transactions on Software Engineering and Methodology, 2023.
+- Zhang, Y., Song, F., Sun, J.: QEBVerif: Quantization Error Bound Verification of Neural Networks. In: Proceedings of the 35th International Conference on Computer Aided Verification, 2023.
